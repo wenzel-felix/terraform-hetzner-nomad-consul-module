@@ -1,4 +1,5 @@
 #!/bin/bash
+
 # Update the server and install needed packages
 apt update
 apt upgrade
@@ -30,13 +31,6 @@ mkdir --parents /etc/consul.d
 touch /etc/consul.d/consul.hcl
 chown --recursive consul:consul /etc/consul.d
 chmod 640 /etc/consul.d/consul.hcl
-
-# Prepare the TLS certificates for Consul
-consul tls ca create
-consul tls cert create -server -dc dc1
-consul tls cert create -server -dc dc1
-consul tls cert create -server -dc dc1
-consul tls cert create -client -dc dc1
 
 # Similar to the Consul binary, we first define the version as a variable
 export NOMAD_VERSION="1.1.3"
