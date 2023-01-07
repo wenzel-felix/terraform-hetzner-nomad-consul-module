@@ -123,7 +123,7 @@ resource "hcloud_network_subnet" "network" {
   ip_range     = local.IP_range
 }
 
-resource "hcloud_server" "server" {
+resource "hcloud_server" "main" {
   depends_on = [
     hcloud_network_subnet.network
   ]
@@ -139,4 +139,12 @@ resource "hcloud_server" "server" {
   }
 
   user_data = join("\n", [file("scripts/base_configuration.sh"), data.template_file.base_configuration[each.key].rendered])
+}
+
+output "server_info" {
+  value = {
+    for server in hcloud_server.main : server.name => {
+      "ip" = server.ipv4_address
+    }
+  }
 }
