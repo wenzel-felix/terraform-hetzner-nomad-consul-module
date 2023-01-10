@@ -3,7 +3,7 @@
 # Update the server and install needed packages
 apt update
 apt upgrade -y
-apt install unzip
+apt install unzip jq -y
 cd /root/
 
 # To install HashiCorp Consul, we need to download and install the respective binary. First, define the version and host in an environment variable

@@ -57,7 +57,7 @@ resource "null_resource" "name" {
     command = <<EOF
         rm tmp/[a-zA-Z0-9]*
     EOF
-    when = destroy
+    when    = destroy
   }
 }
 
@@ -106,9 +106,9 @@ data "local_file" "dc1_consul_key_pem" {
 }
 
 resource "random_string" "random" {
-  for_each    = local.Aggregator_IPs
-  length           = 16
-  special          = false
+  for_each = local.Aggregator_IPs
+  length   = 16
+  special  = false
 }
 
 resource "hcloud_network" "network" {
@@ -128,10 +128,11 @@ resource "hcloud_server" "main" {
     hcloud_network_subnet.network
   ]
   for_each    = local.Aggregator_IPs
-  name        = "server-${random_string.random[each.key].result}"
+  name        = "${each.value.type}-${random_string.random[each.key].result}"
   server_type = "cx11"
   image       = "ubuntu-20.04"
   location    = "nbg1"
+  ssh_keys    = [hcloud_ssh_key.default.id]
 
   network {
     network_id = hcloud_network.network.id
@@ -139,12 +140,24 @@ resource "hcloud_server" "main" {
   }
 
   user_data = join("\n", [file("scripts/base_configuration.sh"), data.template_file.base_configuration[each.key].rendered])
+
+  lifecycle {
+    ignore_changes = [
+      user_data
+    ]
+  }
 }
 
-output "server_info" {
-  value = {
-    for server in hcloud_server.main : server.name => {
-      "ip" = server.ipv4_address
-    }
-  }
+resource "tls_private_key" "machines" {
+  algorithm = "RSA"
+}
+
+resource "hcloud_ssh_key" "default" {
+  name       = "Terraform Example"
+  public_key = tls_private_key.machines.public_key_openssh
+}
+
+resource "local_file" "private_key" {
+  content  = tls_private_key.machines.private_key_openssh
+  filename = "tmp/machines.pem"
 }

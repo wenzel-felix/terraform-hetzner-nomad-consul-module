@@ -68,12 +68,11 @@ systemctl enable nomad
 systemctl start consul
 systemctl start nomad
 
-reboot
-
 # To check the cluster, run the following command on one of your servers
 #consul members
 
+
 # Since we use ACLs (Access Control Lists) on Nomad, we have to get the bootstrap token first, before checking the status here as well.
-nomad acl bootstrap > nomad_token
 #nomad server members
 
+reboot
