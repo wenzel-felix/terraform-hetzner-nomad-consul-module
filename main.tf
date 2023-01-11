@@ -131,10 +131,12 @@ resource "hcloud_server" "main" {
   image       = "ubuntu-20.04"
   location    = "nbg1"
   ssh_keys    = [hcloud_ssh_key.default.id]
+  labels = {
+    "nomad-${each.value.type}" = "any"
+  }
 
   network {
     network_id = hcloud_network.network.id
-    ip         = each.key
   }
 
   connection {
@@ -145,7 +147,7 @@ resource "hcloud_server" "main" {
   }
 
   provisioner "file" {
-    content      = join("\n", [file("scripts/base_configuration.sh"), data.template_file.base_configuration[each.key].rendered])
+    content     = join("\n", [file("scripts/base_configuration.sh"), data.template_file.base_configuration[each.key].rendered])
     destination = "setup.sh"
   }
 
@@ -155,6 +157,44 @@ resource "hcloud_server" "main" {
       "./setup.sh"
     ]
   }
+}
+
+resource "hcloud_load_balancer" "load_balancer" {
+  name               = "my-load-balancer"
+  load_balancer_type = "lb11"
+  location           = "nbg1"
+}
+
+resource "hcloud_load_balancer_network" "srvnetwork" {
+  load_balancer_id = hcloud_load_balancer.load_balancer.id
+  network_id       = hcloud_network.network.id
+}
+
+resource "hcloud_load_balancer_service" "load_balancer_service" {
+  load_balancer_id = hcloud_load_balancer.load_balancer.id
+  protocol         = "http"
+  listen_port      = 80
+  destination_port = 4646
+  http {
+    sticky_sessions = true
+  }
+  health_check {
+    protocol = "http"
+    port     = 4646
+    interval = 10
+    timeout  = 5
+    retries  = 3
+    http {
+      path = "/v1/status/leader"
+    }
+  }
+}
+
+resource "hcloud_load_balancer_target" "load_balancer_target" {
+  type             = "label_selector"
+  load_balancer_id = hcloud_load_balancer.load_balancer.id
+  label_selector   = "nomad-server"
+  use_private_ip   = true
 }
 
 resource "tls_private_key" "machines" {
@@ -167,13 +207,13 @@ resource "hcloud_ssh_key" "default" {
 }
 
 resource "local_file" "private_key" {
-  content  = tls_private_key.machines.private_key_openssh
-  filename = "tmp/machines.pem"
+  content         = tls_private_key.machines.private_key_openssh
+  filename        = "tmp/machines.pem"
   file_permission = "0600"
 }
 
 resource "time_sleep" "wait_15_seconds" {
-  depends_on = [hcloud_server.main]
+  depends_on      = [hcloud_server.main]
   create_duration = "15s"
 }
 
