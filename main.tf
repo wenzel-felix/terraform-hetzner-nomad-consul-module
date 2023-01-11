@@ -191,6 +191,9 @@ resource "hcloud_load_balancer_service" "load_balancer_service" {
 }
 
 resource "hcloud_load_balancer_target" "load_balancer_target" {
+  depends_on = [
+    hcloud_load_balancer_network.srvnetwork
+  ]
   type             = "label_selector"
   load_balancer_id = hcloud_load_balancer.load_balancer.id
   label_selector   = "nomad-server"
