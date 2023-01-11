@@ -70,9 +70,10 @@ systemctl start nomad
 
 # To check the cluster, run the following command on one of your servers
 #consul members
-
+#sleep 10
+#curl --request POST http://localhost:4646/v1/acl/bootstrap | jq -r '.SecretID' > nomad_token
 
 # Since we use ACLs (Access Control Lists) on Nomad, we have to get the bootstrap token first, before checking the status here as well.
 #nomad server members
 
-reboot
+#reboot
