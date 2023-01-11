@@ -191,6 +191,9 @@ resource "hcloud_load_balancer_service" "load_balancer_service" {
 }
 
 resource "hcloud_load_balancer_target" "load_balancer_target" {
+  depends_on = [
+    hcloud_load_balancer_network.srvnetwork
+  ]
   type             = "label_selector"
   load_balancer_id = hcloud_load_balancer.load_balancer.id
   label_selector   = "nomad-server"
@@ -210,6 +213,11 @@ resource "local_file" "private_key" {
   content         = tls_private_key.machines.private_key_openssh
   filename        = "tmp/machines.pem"
   file_permission = "0600"
+}
+
+resource "local_file" "load_balancer_ip" {
+  content         = hcloud_load_balancer.load_balancer.ipv4
+  filename        = "tmp/nomad_address"
 }
 
 resource "time_sleep" "wait_15_seconds" {

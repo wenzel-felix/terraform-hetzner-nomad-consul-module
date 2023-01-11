@@ -17,3 +17,7 @@ data "local_file" "nomad_token" {
 output "nomad_token" {
   value = trimspace(data.local_file.nomad_token.content)
 }
+
+output "nomad_address" {
+  value = "http://${hcloud_load_balancer.load_balancer.ipv4}:4646"
+}
