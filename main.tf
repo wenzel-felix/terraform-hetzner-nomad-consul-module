@@ -37,12 +37,10 @@ resource "null_resource" "name" {
         cd tmp
         consul keygen | tr -d '\n' > consul_master.key
         consul tls ca create
-        
         for i in {1..${length(local.Server_IPs)}}
         do
           consul tls cert create -server -dc dc1
         done
-        
         for i in {1..${length(local.Client_IPs)}}
         do
           consul tls cert create -client -dc dc1
@@ -139,11 +137,22 @@ resource "hcloud_server" "main" {
     ip         = each.key
   }
 
-  user_data = join("\n", [file("scripts/base_configuration.sh"), data.template_file.base_configuration[each.key].rendered])
+  connection {
+    type        = "ssh"
+    user        = "root"
+    private_key = tls_private_key.machines.private_key_openssh
+    host        = self.ipv4_address
+  }
 
-  lifecycle {
-    ignore_changes = [
-      user_data
+  provisioner "file" {
+    content      = join("\n", [file("scripts/base_configuration.sh"), data.template_file.base_configuration[each.key].rendered])
+    destination = "setup.sh"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "chmod +x setup.sh",
+      "./setup.sh"
     ]
   }
 }
@@ -160,4 +169,23 @@ resource "hcloud_ssh_key" "default" {
 resource "local_file" "private_key" {
   content  = tls_private_key.machines.private_key_openssh
   filename = "tmp/machines.pem"
+  file_permission = "0600"
+}
+
+resource "time_sleep" "wait_15_seconds" {
+  depends_on = [hcloud_server.main]
+  create_duration = "15s"
+}
+
+resource "null_resource" "fetch_nomad_token" {
+  depends_on = [time_sleep.wait_15_seconds]
+
+  provisioner "local-exec" {
+    command = <<EOF
+      for i in ${join(" ", [for server in hcloud_server.main : server.ipv4_address if length(regexall("server.*", server.name)) > 0])}
+      do
+        ssh -i tmp/machines.pem -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev/null" root@$i curl --request POST http://localhost:4646/v1/acl/bootstrap | jq -r -R 'fromjson? | .SecretID?' >> tmp/nomad_token
+      done
+    EOF
+  }
 }
