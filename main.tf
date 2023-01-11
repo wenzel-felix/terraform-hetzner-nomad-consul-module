@@ -212,6 +212,11 @@ resource "local_file" "private_key" {
   file_permission = "0600"
 }
 
+resource "local_file" "load_balancer_ip" {
+  content         = hcloud_load_balancer.load_balancer.ipv4
+  filename        = "tmp/nomad_address"
+}
+
 resource "time_sleep" "wait_15_seconds" {
   depends_on      = [hcloud_server.main]
   create_duration = "15s"
