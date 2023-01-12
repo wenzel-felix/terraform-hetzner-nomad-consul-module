@@ -186,6 +186,10 @@ resource "hcloud_load_balancer_service" "load_balancer_service" {
     retries  = 3
     http {
       path = "/v1/status/leader"
+      status_codes = [
+        "2??",
+        "3??",
+      ]
     }
   }
 }
@@ -216,17 +220,17 @@ resource "local_file" "private_key" {
 }
 
 resource "local_file" "load_balancer_ip" {
-  content         = hcloud_load_balancer.load_balancer.ipv4
-  filename        = "tmp/nomad_address"
+  content  = hcloud_load_balancer.load_balancer.ipv4
+  filename = "tmp/nomad_address"
 }
 
-resource "time_sleep" "wait_15_seconds" {
+resource "time_sleep" "wait_60_seconds" {
   depends_on      = [hcloud_server.main]
-  create_duration = "15s"
+  create_duration = "60s"
 }
 
 resource "null_resource" "fetch_nomad_token" {
-  depends_on = [time_sleep.wait_15_seconds]
+  depends_on = [time_sleep.wait_60_seconds]
 
   provisioner "local-exec" {
     command = <<EOF
