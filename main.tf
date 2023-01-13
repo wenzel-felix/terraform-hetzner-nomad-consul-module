@@ -13,20 +13,28 @@ provider "hcloud" {
 
 locals {
   IP_range   = "10.0.0.0/16"
-  Server_IPs = ["10.0.0.2", "10.0.0.3", "10.0.0.4"]
-  Client_IPs = ["10.0.0.5"]
-  Aggregator_IPs = merge({ for ip in local.Server_IPs : ip => {
+  Server_Count = range(3)
+  Client_Count = range(1)
+  Aggregator_Data = merge({ for id in local.Server_Count : "server-${id}" => {
     "type" = "server"
-    "id"   = index(local.Server_IPs, ip)
-    } }, { for ip in local.Client_IPs : ip => {
+    "id"   = id
+    } }, { for id in local.Client_Count : "client-${id}" => {
     "type" = "client"
-    "id"   = index(local.Client_IPs, ip)
+    "id"   = id
   } })
+  Extended_Aggregator_IPs = {
+    for key, value in local.Aggregator_Data : key => {
+      "private_ipv4" = hcloud_server.main[key].network[*].ip
+      "public_ipv4" = hcloud_server.main[key].ipv4_address
+      "type" = value.type
+      "id"   = value.id
+    }
+  }
 }
 
 resource "null_resource" "name" {
   triggers = {
-    "Configurations" = join(",", [for key, value in local.Aggregator_IPs : "${key}=${value.type}"])
+    "Configurations" = join(",", [for key, value in local.Aggregator_Data : "${key}=${value.type}"])
   }
 
   provisioner "local-exec" {
@@ -37,11 +45,11 @@ resource "null_resource" "name" {
         cd tmp
         consul keygen | tr -d '\n' > consul_master.key
         consul tls ca create
-        for i in {1..${length(local.Server_IPs)}}
+        for i in {1..${length(local.Server_Count)}}
         do
           consul tls cert create -server -dc dc1
         done
-        for i in {1..${length(local.Client_IPs)}}
+        for i in {1..${length(local.Client_Count)}}
         do
           consul tls cert create -client -dc dc1
         done
@@ -60,16 +68,16 @@ resource "null_resource" "name" {
 }
 
 data "template_file" "base_configuration" {
-  for_each = local.Aggregator_IPs
+  for_each = local.Aggregator_Data
   template = each.value.type == "server" ? file("scripts/server_setup.sh") : file("scripts/client_setup.sh")
   vars = {
     CONSUL_AGENT_CA_PEM = data.local_file.consul_agent_ca_pem.content
     DC1_CONSUL_PEM      = data.local_file.dc1_consul_pem[each.key].content
     DC1_CONSUL_KEY_PEM  = data.local_file.dc1_consul_key_pem[each.key].content
     MASTER_KEY          = data.local_file.consul_master_key.content
-    SERVER_COUNT        = length(local.Server_IPs)
+    SERVER_COUNT        = length(local.Server_Count)
     IP_RANGE            = local.IP_range
-    SERVER_IPs          = jsonencode(local.Server_IPs)
+    SERVER_IPs          = jsonencode([for key, value in local.Extended_Aggregator_IPs: value.private_ipv4[0] if value.type == "server"])
   }
 }
 
@@ -91,7 +99,7 @@ data "local_file" "dc1_consul_pem" {
   depends_on = [
     null_resource.name
   ]
-  for_each = local.Aggregator_IPs
+  for_each = local.Aggregator_Data
   filename = "tmp/dc1-${each.value.type}-consul-${each.value.id}.pem"
 }
 
@@ -99,12 +107,12 @@ data "local_file" "dc1_consul_key_pem" {
   depends_on = [
     null_resource.name
   ]
-  for_each = local.Aggregator_IPs
+  for_each = local.Aggregator_Data
   filename = "tmp/dc1-${each.value.type}-consul-${each.value.id}-key.pem"
 }
 
 resource "random_string" "random" {
-  for_each = local.Aggregator_IPs
+  for_each = local.Aggregator_Data
   length   = 16
   special  = false
 }
@@ -125,8 +133,8 @@ resource "hcloud_server" "main" {
   depends_on = [
     hcloud_network_subnet.network
   ]
-  for_each    = local.Aggregator_IPs
-  name        = "${each.value.type}-${random_string.random[each.key].result}"
+  for_each    = local.Aggregator_Data
+  name        = "${each.key}-${random_string.random[each.key].result}"
   server_type = "cx11"
   image       = "ubuntu-20.04"
   location    = "nbg1"
@@ -139,11 +147,18 @@ resource "hcloud_server" "main" {
     network_id = hcloud_network.network.id
   }
 
+  public_net {
+    ipv6_enabled = false
+  }
+}
+
+resource "null_resource" "deployment" {
+  for_each = local.Extended_Aggregator_IPs
   connection {
     type        = "ssh"
     user        = "root"
     private_key = tls_private_key.machines.private_key_openssh
-    host        = self.ipv4_address
+    host        = each.value.public_ipv4
   }
 
   provisioner "file" {
@@ -186,6 +201,10 @@ resource "hcloud_load_balancer_service" "load_balancer_service" {
     retries  = 3
     http {
       path = "/v1/status/leader"
+      status_codes = [
+        "2??",
+        "3??",
+      ]
     }
   }
 }
@@ -216,17 +235,17 @@ resource "local_file" "private_key" {
 }
 
 resource "local_file" "load_balancer_ip" {
-  content         = hcloud_load_balancer.load_balancer.ipv4
-  filename        = "tmp/nomad_address"
+  content  = hcloud_load_balancer.load_balancer.ipv4
+  filename = "tmp/nomad_address"
 }
 
-resource "time_sleep" "wait_15_seconds" {
-  depends_on      = [hcloud_server.main]
-  create_duration = "15s"
+resource "time_sleep" "wait_60_seconds" {
+  depends_on      = [null_resource.deployment]
+  create_duration = "60s"
 }
 
 resource "null_resource" "fetch_nomad_token" {
-  depends_on = [time_sleep.wait_15_seconds]
+  depends_on = [time_sleep.wait_60_seconds]
 
   provisioner "local-exec" {
     command = <<EOF
@@ -235,5 +254,13 @@ resource "null_resource" "fetch_nomad_token" {
         ssh -i tmp/machines.pem -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev/null" root@$i curl --request POST http://localhost:4646/v1/acl/bootstrap | jq -r -R 'fromjson? | .SecretID?' >> tmp/nomad_token
       done
     EOF
+  }
+}
+
+resource "null_resource" "set_cluster_private" {
+  depends_on = [null_resource.fetch_nomad_token]
+
+  provisioner "local-exec" {
+    command = "scripts/set_cluster_private.sh ${local.hcloud_token}"
   }
 }
