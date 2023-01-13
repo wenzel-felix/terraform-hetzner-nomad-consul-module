@@ -1,6 +1,6 @@
 provider "nomad" {
-  address   = "http://${file("../tmp/nomad_address")}:80"
-  secret_id = trimspace(file("../tmp/nomad_token"))
+  address   = "http://${file("../certs/nomad_address")}:80"
+  secret_id = trimspace(file("../certs/nomad_token"))
 }
 
 locals {
@@ -17,7 +17,7 @@ job "demo-webapp" {
   datacenters = ["dc1"]
 
   group "demo" {
-    count = 1
+    count = 4
 
     network {
       port  "http"{
@@ -51,6 +51,57 @@ job "demo-webapp" {
         args  = [
           "-listen", ":8888",
           "-text", "Hello World!",
+        ]
+      }
+    }
+  }
+}
+EOT
+}
+
+resource "nomad_job" "demo-webapp-2" {
+  depends_on = [
+    nomad_job.traefik
+  ]
+  jobspec = <<EOT
+job "demo-webapp-2" {
+  datacenters = ["dc1"]
+
+  group "demo" {
+    count = 4
+
+    network {
+      port  "http"{
+        static = 8889
+      }
+    }
+
+    service {
+      name = "demo-webapp-2"
+      port = "http"
+
+      tags = [
+        "traefik.enable=true",
+        "traefik.http.routers.http.rule=Path(`/`)",
+      ]
+
+      check {
+        type     = "http"
+        path     = "/health"
+        interval = "2s"
+        timeout  = "2s"
+      }
+    }
+
+    task "server" {
+      driver = "docker"
+
+      config {
+        image = "hashicorp/http-echo"
+        network_mode = "host"
+        args  = [
+          "-listen", ":8889",
+          "-text", "Hello Worlds!",
         ]
       }
     }
