@@ -3,11 +3,6 @@ provider "nomad" {
   secret_id = trimspace(file("../certs/nomad_token"))
 }
 
-locals {
-  NOMAD_PORT_http = "80"
-  NOMAD_IP_http   = "10.0.0.3"
-}
-
 resource "nomad_job" "demo-webapp" {
   depends_on = [
     nomad_job.traefik
@@ -17,7 +12,7 @@ job "demo-webapp" {
   datacenters = ["dc1"]
 
   group "demo" {
-    count = 4
+    count = 1
 
     network {
       port  "http"{
