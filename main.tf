@@ -41,11 +41,20 @@ resource "null_resource" "create_root_certs" {
         mkdir -p ${path.root}/certs
         mkdir -p ${path.root}/tmp
         cd ${path.root}/certs
-        consul keygen | tr -d '\n' > consul_master.key
-        consul tls ca create
+        if [[ ! -f "consul-agent-ca-key.pem" ]] || [[ ! -f "consul-agent-ca.pem" ]]
+        then
+          echo "Creating new CA"
+          rm ./consul-agent-ca-key.pem
+          rm ./consul-agent-ca.pem
+          consul tls ca create
+        fi
+        if [[ ! -f "consul_master.key" ]]
+        then
+          echo "Creating new Consul agent encryption key"
+          consul keygen | tr -d '\n' > consul_master.key
+        fi
     EOF
   }
-
   provisioner "local-exec" {
     interpreter = [
       "/bin/bash", "-c"
