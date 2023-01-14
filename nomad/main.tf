@@ -1,6 +1,6 @@
 provider "nomad" {
-  address   = "http://${file("../tmp/nomad_address")}:80"
-  secret_id = trimspace(file("../tmp/nomad_token"))
+  address   = "http://${file("../certs/nomad_address")}:80"
+  secret_id = trimspace(file("../certs/nomad_token"))
 }
 
 locals {
@@ -17,7 +17,7 @@ job "demo-webapp" {
   datacenters = ["dc1"]
 
   group "demo" {
-    count = 1
+    count = 4
 
     network {
       port  "http"{
@@ -31,7 +31,7 @@ job "demo-webapp" {
 
       tags = [
         "traefik.enable=true",
-        "traefik.http.routers.http.rule=Path(`/myapp`)",
+        "traefik.http.routers.http.rule=Path(`/`)",
       ]
 
       check {

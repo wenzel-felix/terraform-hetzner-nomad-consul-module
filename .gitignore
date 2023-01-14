@@ -3,6 +3,7 @@
 .terraform.lock*
 auth.tf
 tmp/[a-zA-Z0-9]*
+certs/[a-zA-Z0-9]*
 
 # .tfstate files
 *.tfstate

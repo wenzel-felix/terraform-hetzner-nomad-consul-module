@@ -11,7 +11,7 @@ data "local_file" "nomad_token" {
   depends_on = [
     null_resource.fetch_nomad_token
   ]
-  filename = "tmp/nomad_token"
+  filename = "certs/nomad_token"
 }
 
 output "nomad_token" {
