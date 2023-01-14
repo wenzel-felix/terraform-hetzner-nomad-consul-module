@@ -311,7 +311,7 @@ resource "hcloud_firewall" "default" {
 
 resource "hcloud_firewall_attachment" "fw_ref" {
   firewall_id = hcloud_firewall.default.id
-  server_ids  = [for server in hcloud_server.main : server.id]
+  label_selectors  = ["nomad-server", "nomad-client"]
 }
 
 resource "hcloud_load_balancer" "app_load_balancer" {
