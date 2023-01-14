@@ -8,13 +8,13 @@ terraform {
 }
 
 provider "hcloud" {
-  token = local.hcloud_token
+  token = var.hetzner_token
 }
 
 locals {
-  IP_range     = "10.0.0.0/16"
-  Server_Count = range(3)
-  Client_Count = range(1)
+  IP_range     = var.virtual_network_cidr
+  Server_Count = range(var.nomad_server_count)
+  Client_Count = range(var.nomad_client_count)
   Aggregator_Data = merge({ for id in local.Server_Count : "server-${id}" => {
     "type" = "server"
     "id"   = id
@@ -38,18 +38,30 @@ resource "null_resource" "create_root_certs" {
       "/bin/bash", "-c"
     ]
     command = <<EOF
-        cd certs
-        consul keygen | tr -d '\n' > consul_master.key
-        consul tls ca create
+        mkdir -p ${path.root}/certs
+        mkdir -p ${path.root}/tmp
+        cd ${path.root}/certs
+        if [[ ! -f "consul-agent-ca-key.pem" ]] || [[ ! -f "consul-agent-ca.pem" ]]
+        then
+          echo "Creating new CA"
+          rm ./consul-agent-ca-key.pem
+          rm ./consul-agent-ca.pem
+          consul tls ca create
+        fi
+        if [[ ! -f "consul_master.key" ]]
+        then
+          echo "Creating new Consul agent encryption key"
+          consul keygen | tr -d '\n' > consul_master.key
+        fi
     EOF
   }
-
   provisioner "local-exec" {
     interpreter = [
       "/bin/bash", "-c"
     ]
     command = <<EOF
-        rm certs/[a-zA-Z0-9]*
+        rm -rf ${path.root}/certs/
+        rm -rf ${path.root}/tmp/
     EOF
     when    = destroy
   }
@@ -66,14 +78,14 @@ resource "null_resource" "create_client_certs" {
       "/bin/bash", "-c"
     ]
     command = <<EOF
-    cd tmp
-    mkdir ${each.key}
-    cd ${each.key}
+    mkdir -p ${path.root}/tmp/${each.key}
+    cd ${path.root}/tmp/${each.key}
     consul tls cert create -client -dc dc1 -ca ../../certs/consul-agent-ca.pem -key ../../certs/consul-agent-ca-key.pem
-    mv dc1-client-consul-0-key.pem ../../certs/dc1-client-consul-${each.value.id}-key.pem
-    mv dc1-client-consul-0.pem ../../certs/dc1-client-consul-${each.value.id}.pem
-    cd .. 
-    rm -rf ${each.key}
+    cd ../..
+    echo ${path.root}
+    mv ${path.root}/tmp/${each.key}/dc1-client-consul-0-key.pem ${path.root}/certs/dc1-client-consul-${each.value.id}-key.pem
+    mv ${path.root}/tmp/${each.key}/dc1-client-consul-0.pem ${path.root}/certs/dc1-client-consul-${each.value.id}.pem
+    rm -rf ${path.root}/tmp/${each.key}
     EOF
   }
 }
@@ -89,21 +101,21 @@ resource "null_resource" "create_server_certs" {
       "/bin/bash", "-c"
     ]
     command = <<EOF
-    cd tmp
-    mkdir ${each.key}
-    cd ${each.key}
+    mkdir -p ${path.root}/tmp/${each.key}
+    cd ${path.root}/tmp/${each.key}
     consul tls cert create -server -dc dc1 -ca ../../certs/consul-agent-ca.pem -key ../../certs/consul-agent-ca-key.pem
-    mv dc1-server-consul-0-key.pem ../../certs/dc1-server-consul-${each.value.id}-key.pem
-    mv dc1-server-consul-0.pem ../../certs/dc1-server-consul-${each.value.id}.pem
-    cd .. 
-    rm -rf ${each.key}
+    cd ../..
+    echo ${path.root}
+    mv ${path.root}/tmp/${each.key}/dc1-server-consul-0-key.pem ${path.root}/certs/dc1-server-consul-${each.value.id}-key.pem
+    mv ${path.root}/tmp/${each.key}/dc1-server-consul-0.pem ${path.root}/certs/dc1-server-consul-${each.value.id}.pem
+    rm -rf ${path.root}/tmp/${each.key}
     EOF
   }
 }
 
 data "template_file" "base_configuration" {
   for_each = local.Aggregator_Data
-  template = each.value.type == "server" ? file("scripts/server_setup.sh") : file("scripts/client_setup.sh")
+  template = each.value.type == "server" ? file("${path.module}/scripts/server_setup.sh") : file("${path.module}/scripts/client_setup.sh")
   vars = {
     CONSUL_AGENT_CA_PEM = data.local_file.consul_agent_ca_pem.content
     DC1_CONSUL_PEM      = data.local_file.dc1_consul_pem[each.key].content
@@ -119,14 +131,14 @@ data "local_file" "consul_agent_ca_pem" {
   depends_on = [
     null_resource.create_root_certs
   ]
-  filename = "certs/consul-agent-ca.pem"
+  filename = "${path.root}/certs/consul-agent-ca.pem"
 }
 
 data "local_file" "consul_master_key" {
   depends_on = [
     null_resource.create_root_certs
   ]
-  filename = "certs/consul_master.key"
+  filename = "${path.root}/certs/consul_master.key"
 }
 
 data "local_file" "dc1_consul_pem" {
@@ -135,7 +147,7 @@ data "local_file" "dc1_consul_pem" {
     null_resource.create_client_certs
   ]
   for_each = local.Aggregator_Data
-  filename = "certs/dc1-${each.value.type}-consul-${each.value.id}.pem"
+  filename = "${path.root}/certs/dc1-${each.value.type}-consul-${each.value.id}.pem"
 }
 
 data "local_file" "dc1_consul_key_pem" {
@@ -144,7 +156,7 @@ data "local_file" "dc1_consul_key_pem" {
     null_resource.create_client_certs
   ]
   for_each = local.Aggregator_Data
-  filename = "certs/dc1-${each.value.type}-consul-${each.value.id}-key.pem"
+  filename = "${path.root}/certs/dc1-${each.value.type}-consul-${each.value.id}-key.pem"
 }
 
 resource "random_string" "random" {
@@ -201,7 +213,7 @@ resource "null_resource" "deployment" {
   }
 
   provisioner "file" {
-    content     = join("\n", [file("scripts/base_configuration.sh"), data.template_file.base_configuration[each.key].rendered])
+    content     = join("\n", [file("${path.module}/scripts/base_configuration.sh"), data.template_file.base_configuration[each.key].rendered])
     destination = "setup.sh"
   }
 
@@ -269,13 +281,13 @@ resource "hcloud_ssh_key" "default" {
 
 resource "local_file" "private_key" {
   content         = tls_private_key.machines.private_key_openssh
-  filename        = "certs/machines.pem"
+  filename        = "${path.root}/certs/machines.pem"
   file_permission = "0600"
 }
 
 resource "local_file" "load_balancer_ip" {
   content  = hcloud_load_balancer.load_balancer.ipv4
-  filename = "certs/nomad_address"
+  filename = "${path.root}/certs/nomad_address"
 }
 
 resource "time_sleep" "wait_60_seconds" {
@@ -290,7 +302,7 @@ resource "null_resource" "fetch_nomad_token" {
     command = <<EOF
       for i in ${join(" ", [for server in hcloud_server.main : server.ipv4_address if length(regexall("server.*", server.name)) > 0])}
       do
-        ssh -i certs/machines.pem -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev/null" root@$i curl --request POST http://localhost:4646/v1/acl/bootstrap | jq -r -R 'fromjson? | .SecretID?' >> certs/nomad_token
+        ssh -i ${path.root}/certs/machines.pem -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev/null" root@$i curl --request POST http://localhost:4646/v1/acl/bootstrap | jq -r -R 'fromjson? | .SecretID?' >> ${path.root}/certs/nomad_token
       done
     EOF
   }

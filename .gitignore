@@ -4,6 +4,9 @@
 auth.tf
 tmp/[a-zA-Z0-9]*
 certs/[a-zA-Z0-9]*
+*auto.tfvars
+certs
+tmp
 
 # .tfstate files
 *.tfstate
