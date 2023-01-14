@@ -1,1 +1,3 @@
 hetzner_token = "<your token>"
+cloudflare_token = "<your token>"
+cloudflare_zone_id = "<your zone id>"
