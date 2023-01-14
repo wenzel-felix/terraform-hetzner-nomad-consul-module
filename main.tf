@@ -14,7 +14,7 @@ provider "hcloud" {
 locals {
   IP_range     = "10.0.0.0/16"
   Server_Count = range(3)
-  Client_Count = range(4)
+  Client_Count = range(1)
   Aggregator_Data = merge({ for id in local.Server_Count : "server-${id}" => {
     "type" = "server"
     "id"   = id
@@ -294,4 +294,91 @@ resource "null_resource" "fetch_nomad_token" {
       done
     EOF
   }
+}
+
+resource "hcloud_firewall" "default" {
+  name = "default-firewall"
+  rule {
+    direction = "in"
+    protocol  = "tcp"
+    source_ips = [
+      "0.0.0.0/0",
+      "::/0"
+    ]
+    port = "22"
+  }
+}
+
+resource "hcloud_firewall_attachment" "fw_ref" {
+  firewall_id = hcloud_firewall.default.id
+  server_ids  = [for server in hcloud_server.main : server.id]
+}
+
+resource "hcloud_load_balancer" "app_load_balancer" {
+  name               = "my-app-load-balancer"
+  load_balancer_type = "lb11"
+  location           = "nbg1"
+}
+
+resource "hcloud_load_balancer_network" "app_load_balancer" {
+  load_balancer_id = hcloud_load_balancer.app_load_balancer.id
+  network_id       = hcloud_network.network.id
+}
+
+resource "hcloud_load_balancer_service" "app_load_balancer_service_traefik_dashboard" {
+  load_balancer_id = hcloud_load_balancer.app_load_balancer.id
+  protocol         = "http"
+  listen_port      = 8081
+  destination_port = 8081
+  http {
+    sticky_sessions = true
+  }
+  health_check {
+    protocol = "http"
+    port     = 8081
+    interval = 10
+    timeout  = 5
+    retries  = 3
+    http {
+      path = "/"
+      status_codes = [
+        "2??",
+        "3??",
+      ]
+    }
+  }
+}
+
+resource "hcloud_load_balancer_service" "app_load_balancer_service_traefik_proxy" {
+  load_balancer_id = hcloud_load_balancer.app_load_balancer.id
+  protocol         = "http"
+  listen_port      = 80
+  destination_port = 8080
+  http {
+    sticky_sessions = true
+  }
+  health_check {
+    protocol = "http"
+    port     = 8081
+    interval = 10
+    timeout  = 5
+    retries  = 3
+    http {
+      path = "/"
+      status_codes = [
+        "2??",
+        "3??",
+      ]
+    }
+  }
+}
+
+resource "hcloud_load_balancer_target" "app_load_balancer_target" {
+  depends_on = [
+    hcloud_load_balancer_network.app_load_balancer
+  ]
+  type             = "label_selector"
+  load_balancer_id = hcloud_load_balancer.app_load_balancer.id
+  label_selector   = "nomad-client"
+  use_private_ip   = true
 }
