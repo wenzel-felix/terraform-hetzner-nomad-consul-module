@@ -8,10 +8,10 @@ cd /root/
 
 # To install HashiCorp Consul, we need to download and install the respective binary. First, define the version and host in an environment variable
 export CONSUL_VERSION="1.10.1"
-export CONSUL_URL="https://releases.hashicorp.com/consul"
+export BIN_URL="https://bucket.hetznerdoesnot.work"
 
 # Download the binary, decompress it and install it on your server
-curl --silent --remote-name ${CONSUL_URL}/${CONSUL_VERSION}/consul_${CONSUL_VERSION}_linux_amd64.zip
+curl --silent --remote-name ${BIN_URL}/consul_${CONSUL_VERSION}_linux_amd64.zip
 unzip consul_${CONSUL_VERSION}_linux_amd64.zip
 chown root:root consul
 mv consul /usr/local/bin/
@@ -36,7 +36,7 @@ chmod 640 /etc/consul.d/consul.hcl
 export NOMAD_VERSION="1.1.3"
 
 # Download and install the binary
-curl --silent --remote-name https://releases.hashicorp.com/nomad/${NOMAD_VERSION}/nomad_${NOMAD_VERSION}_linux_amd64.zip
+curl --silent --remote-name ${BIN_URL}/nomad_${NOMAD_VERSION}_linux_amd64.zip
 unzip nomad_${NOMAD_VERSION}_linux_amd64.zip
 chown root:root nomad
 mv nomad /usr/local/bin/
@@ -175,3 +175,9 @@ Unattended-Upgrade::Automatic-Reboot "true";
 // speed to 70kb/sec
 //Acquire::http::Dl-Limit "70";
 EOF
+
+# Install docker
+export DOCKER_VERSION="20.10.12"
+wget ${BIN_URL}/docker-${DOCKER_VERSION}.tgz
+tar -xzvf docker-${DOCKER_VERSION}.tgz
+cp docker/* /usr/bin/
