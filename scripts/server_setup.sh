@@ -19,12 +19,19 @@ cat <<EOF > /etc/consul.d/consul.hcl
 datacenter = "dc1"
 data_dir = "/opt/consul"
 encrypt = "${MASTER_KEY}"
-ca_file = "/etc/consul.d/consul-agent-ca.pem"
-cert_file = "/etc/consul.d/dc1-server-consul.pem"
-key_file = "/etc/consul.d/dc1-server-consul-key.pem"
-verify_incoming = true
-verify_outgoing = true
-verify_server_hostname = true
+tls {
+  defaults {
+    ca_file = "/etc/consul.d/consul-agent-ca.pem"
+    cert_file = "/etc/consul.d/dc1-server-consul.pem"
+    key_file = "/etc/consul.d/dc1-server-consul-key.pem"
+    verify_incoming = true
+    verify_outgoing = true
+    }
+  internal_rpc {
+    verify_server_hostname = true
+  }
+  
+}
 retry_join = ${SERVER_IPs}
 bind_addr = "{{ GetPrivateInterfaces | include \"network\" \"${IP_RANGE}\" | attr \"address\" }}"
 

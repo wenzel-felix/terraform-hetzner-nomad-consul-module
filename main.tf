@@ -173,7 +173,7 @@ resource "hcloud_network" "network" {
 resource "hcloud_network_subnet" "network" {
   network_id   = hcloud_network.network.id
   type         = "cloud"
-  network_zone = "eu-central"
+  network_zone = var.hetzner_network_zone
   ip_range     = local.IP_range
 }
 
@@ -183,9 +183,9 @@ resource "hcloud_server" "main" {
   ]
   for_each    = local.Aggregator_Data
   name        = "${each.key}-${random_string.random[each.key].result}"
-  server_type = "cx11"
+  server_type = "cpx11"
   image       = "ubuntu-20.04"
-  location    = "nbg1"
+  location    = var.hetzner_datacenter
   ssh_keys    = [hcloud_ssh_key.default.id]
   labels = {
     "nomad-${each.value.type}" = "any"
@@ -228,7 +228,7 @@ resource "null_resource" "deployment" {
 resource "hcloud_load_balancer" "load_balancer" {
   name               = "my-load-balancer"
   load_balancer_type = "lb11"
-  location           = "nbg1"
+  location           = var.hetzner_datacenter
 }
 
 resource "hcloud_load_balancer_network" "srvnetwork" {
@@ -332,7 +332,7 @@ resource "hcloud_firewall_attachment" "default" {
 resource "hcloud_load_balancer" "app_load_balancer" {
   name               = "my-app-load-balancer"
   load_balancer_type = "lb11"
-  location           = "nbg1"
+  location           = var.hetzner_datacenter
 }
 
 resource "hcloud_load_balancer_network" "app_load_balancer" {

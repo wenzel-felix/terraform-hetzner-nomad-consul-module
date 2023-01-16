@@ -20,3 +20,15 @@ variable "nomad_client_count" {
     description = "Number of clients to create"
     default = 1
 }
+
+variable "hetzner_datacenter" {
+    type        = string
+    description = "Hetzner Cloud Datacenter"
+    default = "hel1"
+}
+
+variable "hetzner_network_zone" {
+    type        = string
+    description = "Hetzner Cloud Network Zone"
+    default = "eu-central"
+}
