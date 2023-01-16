@@ -22,6 +22,9 @@ provider "hcloud" {
 }
 
 data "hcloud_server" "client-0" {
+  depends_on = [
+    module.hetzner-nomad-consul
+  ]
   name = [for key, value in module.hetzner-nomad-consul.server_info: key if length(regexall("client-0.*", key)) > 0][0]
 }
 
