@@ -29,6 +29,10 @@ output "name" {
   value = hcloud_server.vault.ipv4_address
 }
 
+locals {
+  Consul_IPs = ["10.0.0.10", "10.0.0.11"]
+}
+
 resource "null_resource" "vault_deployment" {
   connection {
     type        = "ssh"

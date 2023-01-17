@@ -84,3 +84,5 @@ systemctl start nomad
 #nomad server members
 
 #reboot
+
+ssh -i ${path.root}/certs/machines.pem -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev/null" root@10.0.0.2 cat connect_ca_token > /etc/consul.d/connect_ca_token

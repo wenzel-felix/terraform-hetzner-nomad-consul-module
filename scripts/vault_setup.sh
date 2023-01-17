@@ -6,6 +6,8 @@ sudo apt update && sudo apt install jq vault -y
 
 #openssl req -newkey rsa:4096 -nodes -sha256 -keyout tls.key -x509 -days 3650 -out tls.crt -subj "/O=HashiCorp/CN=Vault" -addext 'subjectAltName = IP:127.0.0.1'
 #chown vault: /opt/vault/tls/*
+mkdir -p /mnt/vault
+chown vault: /mnt/vault
 cat <<EOF >/etc/vault.d/vault.hcl
 storage "file" {
   path = "/mnt/vault/data"
@@ -20,8 +22,41 @@ api_addr = "http://127.0.0.1:8200"
 ui = true
 EOF
 
+cat <<EOF > /etc/systemd/system/consul.service
+### BEGIN INIT INFO
+# Provides:          vault
+# Required-Start:    $local_fs $remote_fs
+# Required-Stop:     $local_fs $remote_fs
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Vault server
+# Description:       Vault secret management tool
+### END INIT INFO
 
-vault server -config=/etc/vault.d/vault.hcl &
+[Unit]
+Description=Vault secret management tool
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+User=vault
+Group=vault
+PIDFile=/var/run/vault/vault.pid
+ExecStart=/usr/bin/vault server -config=/etc/vault.d/vault.hcl -log-level=debug
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+KillSignal=SIGTERM
+Restart=on-failure
+RestartSec=42s
+LimitMEMLOCK=infinity
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl enable vault
+systemctl start vault
+
 sleep 10
 export VAULT_ADDR=http://127.0.0.1:8200
 vault operator init -format=json | jq -r '.root_token, .unseal_keys_b64[]' > vault_keys
@@ -68,4 +103,4 @@ path "auth/token/lookup-self" {
 }
 EOF
 vault policy write connect-ca vault-policy-connect-ca.hcl
-vault token create -policy=connect-ca > connect_ca_token
+vault token create -policy=connect-ca -format=json | jq -r '.auth.client_token' > connect_ca_token
