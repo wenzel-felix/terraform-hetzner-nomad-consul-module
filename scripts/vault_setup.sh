@@ -12,7 +12,7 @@ storage "file" {
 }
 
 listener "tcp" {
-  address     = "127.0.0.1:8200"
+  address     = "0.0.0.0:8200"
   tls_disable = "true"
 }
 
@@ -24,4 +24,48 @@ EOF
 vault server -config=/etc/vault.d/vault.hcl &
 sleep 10
 export VAULT_ADDR=http://127.0.0.1:8200
-vault operator init -format=json | jq '.root_token, .unseal_keys_b64[]'
+vault operator init -format=json | jq -r '.root_token, .unseal_keys_b64[]' > vault_keys
+vault operator unseal $(cat vault_keys | head -n2 | tail -n1)
+vault operator unseal $(cat vault_keys | head -n3 | tail -n1)
+vault operator unseal $(cat vault_keys | head -n4 | tail -n1)
+sleep 5
+vault login $(cat vault_keys | head -n1 | tail -n1)
+vault login -token-only $(cat vault_keys | head -n1 | tail -n1) > vault_token
+vault secrets enable -path=connect_root pki
+vault secrets enable -path=connect_dc1_inter pki
+
+cat <<EOF > vault-policy-connect-ca.hcl
+path "/sys/mounts/connect_root" {
+  capabilities = [ "read" ]
+}
+
+path "/sys/mounts/connect_dc1_inter" {
+  capabilities = [ "read" ]
+}
+
+path "/sys/mounts/connect_dc1_inter/tune" {
+  capabilities = [ "update" ]
+}
+
+path "/connect_root/" {
+  capabilities = [ "read" ]
+}
+
+path "/connect_root/root/sign-intermediate" {
+  capabilities = [ "update" ]
+}
+
+path "/connect_dc1_inter/*" {
+  capabilities = [ "create", "read", "update", "delete", "list" ]
+}
+
+path "auth/token/renew-self" {
+  capabilities = [ "update" ]
+}
+
+path "auth/token/lookup-self" {
+  capabilities = [ "read" ]
+}
+EOF
+vault policy write connect-ca vault-policy-connect-ca.hcl
+vault token create -policy=connect-ca > connect_ca_token
