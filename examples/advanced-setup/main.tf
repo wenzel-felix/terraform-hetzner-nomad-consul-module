@@ -73,6 +73,10 @@ output "nomad_address" {
   value = module.hetzner-nomad-consul.nomad_address
 }
 
+output "vault_address_http" {
+  value = module.hetzner-nomad-consul.vault_address_http
+}
+
 provider "cloudflare" {
   api_token = var.cloudflare_token
 }
@@ -91,7 +95,7 @@ locals {
 
 resource "cloudflare_record" "traefik" {
   zone_id = var.cloudflare_zone_id
-  name    = "traefik"
+  name    = "api"
   type    = "A"
   proxied = true
   value   = local.traefik_ip

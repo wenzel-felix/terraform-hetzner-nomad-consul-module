@@ -1,36 +1,31 @@
-# Now we can copy the right certificates from step 1 to the Consul configuration directory. Run the following command on all servers
-cat <<EOF > /etc/consul.d/consul-agent-ca.pem
-${CONSUL_AGENT_CA_PEM}
-EOF
-
-cat <<EOF > /etc/consul.d/dc1-server-consul.pem
-${DC1_CONSUL_PEM}
-EOF
-
-cat <<EOF > /etc/consul.d/dc1-server-consul-key.pem
-${DC1_CONSUL_KEY_PEM}
-EOF
-
-# Finally, delete all cert files and keys in your root directory on every server
+# Finally, pull the initial ca token for the servers
 cd /root/
+chmod 600 machines.pem
+ssh -i machines.pem -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev/null" root@10.0.0.2 cat connect_ca_token > /etc/consul.d/connect_ca_token
 
 # On all servers, edit the configuration file /etc/consul.d/consul.hcl and add the content
 cat <<EOF > /etc/consul.d/consul.hcl
 datacenter = "dc1"
 data_dir = "/opt/consul"
-encrypt = "${MASTER_KEY}"
-tls {
-  defaults {
-    ca_file = "/etc/consul.d/consul-agent-ca.pem"
-    cert_file = "/etc/consul.d/dc1-server-consul.pem"
-    key_file = "/etc/consul.d/dc1-server-consul-key.pem"
-    verify_incoming = true
-    verify_outgoing = true
+
+connect {
+  enabled = true
+  ca_provider = "vault"
+    ca_config {
+        address = "http://${VAULT_IP}:8200"
+        token = "Your_Vault_Token"
+        root_pki_path = "connect_root"
+        intermediate_pki_path = "connect_dc1_inter"
+        leaf_cert_ttl = "72h"
+        rotation_period = "2160h"
+        intermediate_cert_ttl = "8760h"
+        private_key_type = "rsa"
+        private_key_bits = 2048
     }
-  internal_rpc {
-    verify_server_hostname = true
-  }
-  
+}
+client_addr = "0.0.0.0"
+ui_config {
+  enabled = true
 }
 retry_join = ${SERVER_IPs}
 bind_addr = "{{ GetPrivateInterfaces | include \"network\" \"${IP_RANGE}\" | attr \"address\" }}"
@@ -38,13 +33,15 @@ bind_addr = "{{ GetPrivateInterfaces | include \"network\" \"${IP_RANGE}\" | att
 acl = {
   enabled = true
   default_policy = "allow"
-  enable_token_persistence = true
+  down_policy    = "extend-cache"
 }
 
 performance {
   raft_multiplier = 1
 }
 EOF
+
+sed -i -r "s/Your_Vault_Token/$(cat /etc/consul.d/connect_ca_token)/" /etc/consul.d/consul.hcl
 
 # Check the configuration with the command
 consul validate /etc/consul.d/consul.hcl
@@ -75,6 +72,9 @@ systemctl enable nomad
 systemctl start consul
 systemctl start nomad
 
+# consul acl bootstrap -format=json | jq -r -R 'fromjson? | .SecretID?' > /etc/consul.d/acl_master_token
+# export CONSUL_HTTP_TOKEN=$(cat /etc/consul.d/acl_master_token)
+# export CONSUL_HTTP_ADDR="http://127.0.0.1:8500"
 # To check the cluster, run the following command on one of your servers
 #consul members
 #sleep 10
