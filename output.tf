@@ -1,4 +1,4 @@
-/* output "server_info" {
+output "server_info" {
   value = {
     for server in hcloud_server.main : server.name => {
       "public_ip"   = server.ipv4_address
@@ -20,4 +20,8 @@ output "nomad_token" {
 
 output "nomad_address" {
   value = "http://${hcloud_load_balancer.load_balancer.ipv4}:80"
-} */
+}
+
+output "vault_address_http" {
+  value = "http://${hcloud_server.vault.ipv4_address}:8200"
+}

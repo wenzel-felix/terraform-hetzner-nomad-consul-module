@@ -1,16 +1,10 @@
-resource "random_string" "random" {
-  for_each = local.Aggregator_Data
-  length   = 16
-  special  = false
-}
-
 resource "hcloud_server" "main" {
   depends_on = [
     hcloud_network_subnet.network,
     hcloud_server.vault
   ]
   for_each    = local.Aggregator_Data
-  name        = "${each.key}-${random_string.random[each.key].result}"
+  name        = "${each.key}"
   server_type = "cpx11"
   image       = "ubuntu-20.04"
   location    = var.hetzner_datacenter
@@ -89,4 +83,14 @@ resource "tls_private_key" "machines" {
 resource "hcloud_ssh_key" "default" {
   name       = "Terraform Example"
   public_key = tls_private_key.machines.public_key_openssh
+}
+
+resource "null_resource" "clean_up" {
+  provisioner "local-exec" {
+    command = <<EOF
+      rm -f ${path.root}/certs/nomad_token
+      rm -f ${path.root}/certs/machines.pem
+    EOF
+    when = destroy
+  }
 }

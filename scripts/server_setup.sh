@@ -12,7 +12,7 @@ connect {
   enabled = true
   ca_provider = "vault"
     ca_config {
-        address = "http://10.0.0.2:8200"
+        address = "http://${VAULT_IP}:8200"
         token = "Your_Vault_Token"
         root_pki_path = "connect_root"
         intermediate_pki_path = "connect_dc1_inter"

@@ -1,10 +1,13 @@
-/* resource "hcloud_load_balancer" "load_balancer" {
+resource "hcloud_load_balancer" "load_balancer" {
+  depends_on = [
+    null_resource.fetch_nomad_token
+  ]
   name               = "my-load-balancer"
   load_balancer_type = "lb11"
   location           = var.hetzner_datacenter
 }
 
-resource "hcloud_load_balancer_network" "srvnetwork" {
+resource "hcloud_load_balancer_network" "load_balancer" {
   load_balancer_id = hcloud_load_balancer.load_balancer.id
   network_id       = hcloud_network.network.id
 }
@@ -35,7 +38,7 @@ resource "hcloud_load_balancer_service" "load_balancer_service" {
 
 resource "hcloud_load_balancer_target" "load_balancer_target" {
   depends_on = [
-    hcloud_load_balancer_network.srvnetwork
+    hcloud_load_balancer_network.load_balancer
   ]
   type             = "label_selector"
   load_balancer_id = hcloud_load_balancer.load_balancer.id
@@ -49,6 +52,9 @@ resource "local_file" "load_balancer_ip" {
 }
 
 resource "hcloud_load_balancer" "app_load_balancer" {
+  depends_on = [
+    null_resource.fetch_nomad_token
+  ]
   name               = "my-app-load-balancer"
   load_balancer_type = "lb11"
   location           = var.hetzner_datacenter
@@ -115,4 +121,4 @@ resource "hcloud_load_balancer_target" "app_load_balancer_target" {
   load_balancer_id = hcloud_load_balancer.app_load_balancer.id
   label_selector   = "nomad-client"
   use_private_ip   = true
-} */
+}

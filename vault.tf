@@ -1,13 +1,8 @@
-resource "random_string" "vault" {
-  length   = 16
-  special  = false
-}
-
 resource "hcloud_server" "vault" {
   depends_on = [
     hcloud_network_subnet.network
   ]
-  name        = "vault-0-${random_string.vault.result}"
+  name        = "vault-0"
   server_type = "cpx11"
   image       = "ubuntu-20.04"
   location    = var.hetzner_datacenter
@@ -25,12 +20,8 @@ resource "hcloud_server" "vault" {
   }
 }
 
-output "name" {
+output "vault_ip" {
   value = hcloud_server.vault.ipv4_address
-}
-
-locals {
-  Consul_IPs = ["10.0.0.10", "10.0.0.11"]
 }
 
 resource "null_resource" "vault_deployment" {

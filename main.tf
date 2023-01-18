@@ -36,6 +36,7 @@ data "template_file" "base_configuration" {
   for_each = local.Aggregator_Data
   template = each.value.type == "server" ? file("${path.module}/scripts/server_setup.sh") : file("${path.module}/scripts/client_setup.sh")
   vars = {
+    VAULT_IP = hcloud_server.vault.ipv4_address
     SERVER_COUNT        = length(local.Server_Count)
     IP_RANGE            = local.IP_range
     SERVER_IPs          = jsonencode([for key, value in local.Extended_Aggregator_IPs : value.private_ipv4[0] if value.type == "server"])
