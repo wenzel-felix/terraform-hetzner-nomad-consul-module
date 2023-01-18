@@ -42,11 +42,6 @@ resource "null_resource" "vault_deployment" {
   }
 
   provisioner "file" {
-    content     = tls_private_key.machines.private_key_openssh
-    destination = "machines.pem"
-  }
-
-  provisioner "file" {
     content     = file("${path.module}/scripts/vault_setup.sh")
     destination = "setup.sh"
   }

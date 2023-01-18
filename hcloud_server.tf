@@ -1,4 +1,4 @@
-/* resource "random_string" "random" {
+resource "random_string" "random" {
   for_each = local.Aggregator_Data
   length   = 16
   special  = false
@@ -6,7 +6,8 @@
 
 resource "hcloud_server" "main" {
   depends_on = [
-    hcloud_network_subnet.network
+    hcloud_network_subnet.network,
+    hcloud_server.vault
   ]
   for_each    = local.Aggregator_Data
   name        = "${each.key}-${random_string.random[each.key].result}"
@@ -40,6 +41,11 @@ resource "null_resource" "deployment" {
   }
 
   provisioner "file" {
+    content     = tls_private_key.machines.private_key_openssh
+    destination = "machines.pem"
+  }
+
+  provisioner "file" {
     content     = join("\n", [file("${path.module}/scripts/base_configuration.sh"), data.template_file.base_configuration[each.key].rendered])
     destination = "setup.sh"
   }
@@ -68,7 +74,7 @@ resource "null_resource" "fetch_nomad_token" {
       done
     EOF
   }
-} */
+}
 
 resource "local_file" "private_key" {
   content         = tls_private_key.machines.private_key_openssh

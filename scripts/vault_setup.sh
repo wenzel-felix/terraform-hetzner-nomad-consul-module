@@ -69,6 +69,8 @@ vault login -token-only $(cat vault_keys | head -n1 | tail -n1) > vault_token
 vault secrets enable -path=connect_root pki
 vault secrets enable -path=connect_dc1_inter pki
 
+# https://developer.hashicorp.com/vault/tutorials/secrets-management/pki-engine
+
 cat <<EOF > vault-policy-connect-ca.hcl
 path "/sys/mounts/connect_root" {
   capabilities = [ "read" ]
