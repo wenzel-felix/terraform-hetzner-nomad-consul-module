@@ -4,7 +4,7 @@ resource "hcloud_server" "main" {
     hcloud_server.vault
   ]
   for_each    = local.Aggregator_Data
-  name        = "${each.key}"
+  name        = each.key
   server_type = "cpx11"
   image       = "ubuntu-20.04"
   location    = var.hetzner_datacenter
@@ -40,7 +40,21 @@ resource "null_resource" "deployment" {
   }
 
   provisioner "file" {
-    content     = join("\n", [file("${path.module}/scripts/base_configuration.sh"), data.template_file.base_configuration[each.key].rendered])
+    content = join("\n", [file("${path.module}/scripts/base_configuration.sh"),
+      each.value.type == "server" ? templatefile("${path.module}/scripts/server_setup.sh",
+        {
+          VAULT_IP     = hcloud_server.vault.ipv4_address
+          SERVER_COUNT = length(local.Server_Count)
+          IP_RANGE     = local.IP_range
+          SERVER_IPs   = jsonencode([for key, value in local.Extended_Aggregator_IPs : value.private_ipv4[0] if value.type == "server"])
+        }) : templatefile("${path.module}/scripts/client_setup.sh",
+        {
+          VAULT_IP     = hcloud_server.vault.ipv4_address
+          SERVER_COUNT = length(local.Server_Count)
+          IP_RANGE     = local.IP_range
+          SERVER_IPs   = jsonencode([for key, value in local.Extended_Aggregator_IPs : value.private_ipv4[0] if value.type == "server"])
+      })
+    ])
     destination = "setup.sh"
   }
 
@@ -91,6 +105,6 @@ resource "null_resource" "clean_up" {
       rm -f ${path.root}/certs/nomad_token
       rm -f ${path.root}/certs/machines.pem
     EOF
-    when = destroy
+    when    = destroy
   }
 }
