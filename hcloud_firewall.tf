@@ -1,4 +1,4 @@
-/* resource "hcloud_firewall" "default" {
+resource "hcloud_firewall" "default" {
   name = "default-firewall"
   rule {
     direction = "in"
@@ -18,4 +18,4 @@ resource "hcloud_firewall_attachment" "default" {
   ]
   firewall_id = hcloud_firewall.default.id
   label_selectors = [ "nomad-server", "nomad-client", "vault-server" ]
-} */
+}
