@@ -10,18 +10,6 @@ data_dir = "/opt/consul"
 
 connect {
   enabled = true
-  ca_provider = "vault"
-    ca_config {
-        address = "http://${VAULT_IP}:8200"
-        token = "Your_Vault_Token"
-        root_pki_path = "connect_root"
-        intermediate_pki_path = "connect_dc1_inter"
-        leaf_cert_ttl = "72h"
-        rotation_period = "2160h"
-        intermediate_cert_ttl = "8760h"
-        private_key_type = "rsa"
-        private_key_bits = 2048
-    }
 }
 client_addr = "0.0.0.0"
 ui_config {

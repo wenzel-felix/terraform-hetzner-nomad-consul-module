@@ -73,10 +73,6 @@ output "nomad_address" {
   value = module.hetzner-nomad-consul.nomad_address
 }
 
-output "vault_address_http" {
-  value = module.hetzner-nomad-consul.vault_address_http
-}
-
 provider "cloudflare" {
   api_token = var.cloudflare_token
 }

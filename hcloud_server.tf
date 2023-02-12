@@ -1,7 +1,6 @@
 resource "hcloud_server" "main" {
   depends_on = [
-    hcloud_network_subnet.network,
-    hcloud_server.vault
+    hcloud_network_subnet.network
   ]
   for_each    = local.Aggregator_Data
   name        = each.key
@@ -43,13 +42,11 @@ resource "null_resource" "deployment" {
     content = join("\n", [file("${path.module}/scripts/base_configuration.sh"),
       each.value.type == "server" ? templatefile("${path.module}/scripts/server_setup.sh",
         {
-          VAULT_IP     = hcloud_server.vault.ipv4_address
           SERVER_COUNT = length(local.Server_Count)
           IP_RANGE     = local.IP_range
           SERVER_IPs   = jsonencode([for key, value in local.Extended_Aggregator_IPs : value.private_ipv4[0] if value.type == "server"])
         }) : templatefile("${path.module}/scripts/client_setup.sh",
         {
-          VAULT_IP     = hcloud_server.vault.ipv4_address
           SERVER_COUNT = length(local.Server_Count)
           IP_RANGE     = local.IP_range
           SERVER_IPs   = jsonencode([for key, value in local.Extended_Aggregator_IPs : value.private_ipv4[0] if value.type == "server"])
