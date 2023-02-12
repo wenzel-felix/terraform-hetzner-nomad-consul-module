@@ -1,8 +1,3 @@
-# Finally, pull the initial ca token for the servers
-cd /root/
-chmod 600 machines.pem
-ssh -i machines.pem -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev/null" root@10.0.0.2 cat connect_ca_token > /etc/consul.d/connect_ca_token
-
 # On all servers, edit the configuration file /etc/consul.d/consul.hcl and add the content
 cat <<EOF > /etc/consul.d/consul.hcl
 datacenter = "dc1"
@@ -10,18 +5,6 @@ data_dir = "/opt/consul"
 
 connect {
   enabled = true
-  ca_provider = "vault"
-    ca_config {
-        address = "http://${VAULT_IP}:8200"
-        token = "Your_Vault_Token"
-        root_pki_path = "connect_root"
-        intermediate_pki_path = "connect_dc1_inter"
-        leaf_cert_ttl = "72h"
-        rotation_period = "2160h"
-        intermediate_cert_ttl = "8760h"
-        private_key_type = "rsa"
-        private_key_bits = 2048
-    }
 }
 client_addr = "0.0.0.0"
 ui_config {

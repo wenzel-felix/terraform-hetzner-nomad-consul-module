@@ -1,7 +1,6 @@
 resource "hcloud_server" "main" {
   depends_on = [
-    hcloud_network_subnet.network,
-    hcloud_server.vault
+    hcloud_network_subnet.network
   ]
   for_each    = local.Aggregator_Data
   name        = each.key
@@ -20,6 +19,23 @@ resource "hcloud_server" "main" {
   public_net {
     ipv6_enabled = false
   }
+
+  user_data = file("${path.module}/scripts/base_configuration.sh")
+
+  provisioner "remote-exec" {
+    inline = [
+      "echo 'Waiting for cloud-init to complete...'",
+      "cloud-init status --wait > /dev/null",
+      "echo 'Completed cloud-init!'",
+    ]
+
+    connection {
+      type        = "ssh"
+      host        = self.ipv4_address
+      user        = "root"
+      private_key = tls_private_key.machines.private_key_openssh
+    }
+  }
 }
 
 resource "null_resource" "deployment" {
@@ -35,26 +51,17 @@ resource "null_resource" "deployment" {
   }
 
   provisioner "file" {
-    content     = tls_private_key.machines.private_key_openssh
-    destination = "machines.pem"
-  }
-
-  provisioner "file" {
-    content = join("\n", [file("${path.module}/scripts/base_configuration.sh"),
-      each.value.type == "server" ? templatefile("${path.module}/scripts/server_setup.sh",
+    content = each.value.type == "server" ? templatefile("${path.module}/scripts/server_setup.sh",
         {
-          VAULT_IP     = hcloud_server.vault.ipv4_address
           SERVER_COUNT = length(local.Server_Count)
           IP_RANGE     = local.IP_range
           SERVER_IPs   = jsonencode([for key, value in local.Extended_Aggregator_IPs : value.private_ipv4[0] if value.type == "server"])
         }) : templatefile("${path.module}/scripts/client_setup.sh",
         {
-          VAULT_IP     = hcloud_server.vault.ipv4_address
           SERVER_COUNT = length(local.Server_Count)
           IP_RANGE     = local.IP_range
           SERVER_IPs   = jsonencode([for key, value in local.Extended_Aggregator_IPs : value.private_ipv4[0] if value.type == "server"])
       })
-    ])
     destination = "setup.sh"
   }
 
@@ -95,7 +102,7 @@ resource "tls_private_key" "machines" {
 }
 
 resource "hcloud_ssh_key" "default" {
-  name       = "Terraform Example"
+  name       = "default"
   public_key = tls_private_key.machines.public_key_openssh
 }
 

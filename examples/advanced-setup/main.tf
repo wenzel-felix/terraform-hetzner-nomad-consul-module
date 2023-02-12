@@ -1,7 +1,7 @@
 module "hetzner-nomad-consul" {
     source = "../../"
     hetzner_token = var.hetzner_token
-    nomad_client_count = 1
+    nomad_client_count = 2
 }
 
 terraform {
@@ -73,10 +73,6 @@ output "nomad_address" {
   value = module.hetzner-nomad-consul.nomad_address
 }
 
-output "vault_address_http" {
-  value = module.hetzner-nomad-consul.vault_address_http
-}
-
 provider "cloudflare" {
   api_token = var.cloudflare_token
 }
@@ -99,4 +95,73 @@ resource "cloudflare_record" "traefik" {
   type    = "A"
   proxied = true
   value   = local.traefik_ip
+}
+
+resource "hcloud_load_balancer" "app_load_balancer" {
+  name               = "api-load-balancer"
+  load_balancer_type = "lb11"
+  location           = "hel1"
+}
+
+resource "hcloud_load_balancer_network" "app_load_balancer" {
+  load_balancer_id = hcloud_load_balancer.app_load_balancer.id
+  network_id       = module.hetzner-nomad-consul.network_id
+}
+
+resource "hcloud_load_balancer_service" "app_load_balancer_service_traefik_dashboard" {
+  load_balancer_id = hcloud_load_balancer.app_load_balancer.id
+  protocol         = "http"
+  listen_port      = 8081
+  destination_port = 8081
+  http {
+    sticky_sessions = true
+  }
+  health_check {
+    protocol = "http"
+    port     = 8081
+    interval = 10
+    timeout  = 5
+    retries  = 3
+    http {
+      path = "/"
+      status_codes = [
+        "2??",
+        "3??",
+      ]
+    }
+  }
+}
+
+resource "hcloud_load_balancer_service" "app_load_balancer_service_traefik_proxy" {
+  load_balancer_id = hcloud_load_balancer.app_load_balancer.id
+  protocol         = "http"
+  listen_port      = 80
+  destination_port = 8080
+  http {
+    sticky_sessions = true
+  }
+  health_check {
+    protocol = "http"
+    port     = 8081
+    interval = 10
+    timeout  = 5
+    retries  = 3
+    http {
+      path = "/"
+      status_codes = [
+        "2??",
+        "3??",
+      ]
+    }
+  }
+}
+
+resource "hcloud_load_balancer_target" "app_load_balancer_target" {
+  depends_on = [
+    hcloud_load_balancer_network.app_load_balancer
+  ]
+  type             = "label_selector"
+  load_balancer_id = hcloud_load_balancer.app_load_balancer.id
+  label_selector   = "nomad-client"
+  use_private_ip   = true
 }

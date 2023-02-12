@@ -22,6 +22,6 @@ output "nomad_address" {
   value = "http://${hcloud_load_balancer.load_balancer.ipv4}:80"
 }
 
-output "vault_address_http" {
-  value = "http://${hcloud_server.vault.ipv4_address}:8200"
+output "network_id" {
+  value = hcloud_network.network.id
 }
