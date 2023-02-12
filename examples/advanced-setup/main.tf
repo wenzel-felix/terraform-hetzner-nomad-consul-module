@@ -1,7 +1,7 @@
 module "hetzner-nomad-consul" {
     source = "../../"
     hetzner_token = var.hetzner_token
-    nomad_client_count = 1
+    nomad_client_count = 2
 }
 
 terraform {

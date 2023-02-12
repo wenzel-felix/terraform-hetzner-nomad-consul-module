@@ -1,8 +1,3 @@
-# Finally, pull the initial ca token for the servers
-cd /root/
-chmod 600 machines.pem
-ssh -i machines.pem -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev/null" root@10.0.0.2 cat connect_ca_token > /etc/consul.d/connect_ca_token
-
 # On all servers, edit the configuration file /etc/consul.d/consul.hcl and add the content
 cat <<EOF > /etc/consul.d/consul.hcl
 datacenter = "dc1"
