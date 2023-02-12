@@ -21,3 +21,7 @@ output "nomad_token" {
 output "nomad_address" {
   value = "http://${hcloud_load_balancer.load_balancer.ipv4}:80"
 }
+
+output "network_id" {
+  value = hcloud_network.network.id
+}
