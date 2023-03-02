@@ -7,15 +7,8 @@ output "server_info" {
   }
 }
 
-data "local_file" "nomad_token" {
-  depends_on = [
-    null_resource.fetch_nomad_token
-  ]
-  filename = "certs/nomad_token"
-}
-
 output "nomad_token" {
-  value = trimspace(data.local_file.nomad_token.content)
+  value = fileexists("certs/nomad_token") ? trimspace(file("certs/nomad_token")) : "Could not find nomad token file from initial bootstrap. If this is your initial apply, please create a GitHub issue."
 }
 
 output "nomad_address" {
