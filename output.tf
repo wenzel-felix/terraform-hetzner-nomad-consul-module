@@ -14,3 +14,7 @@ output "nomad_address" {
 output "network_id" {
   value = hcloud_network.network.id
 }
+
+output "tls_private_key" {
+  value = tls_private_key.machines.private_key_pem
+}
