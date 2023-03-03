@@ -26,7 +26,7 @@ resource "hcloud_server" "main" {
     inline = [
       "echo 'Waiting for cloud-init to complete...'",
       "cloud-init status --wait > /dev/null",
-      "echo 'Completed cloud-init!'",
+      "echo 'Completed cloud-init!'"
     ]
 
     connection {
@@ -53,11 +53,13 @@ resource "null_resource" "deployment" {
   provisioner "file" {
     content = each.value.type == "server" ? templatefile("${path.module}/scripts/server_setup.sh",
         {
+          bootstrap = var.bootstrap
           SERVER_COUNT = length(local.Server_Count)
           IP_RANGE     = local.IP_range
           SERVER_IPs   = jsonencode([for key, value in local.Extended_Aggregator_IPs : value.private_ipv4[0] if value.type == "server"])
         }) : templatefile("${path.module}/scripts/client_setup.sh",
         {
+          bootstrap = var.bootstrap
           SERVER_COUNT = length(local.Server_Count)
           IP_RANGE     = local.IP_range
           SERVER_IPs   = jsonencode([for key, value in local.Extended_Aggregator_IPs : value.private_ipv4[0] if value.type == "server"])
@@ -70,24 +72,6 @@ resource "null_resource" "deployment" {
       "chmod +x setup.sh",
       "./setup.sh"
     ]
-  }
-}
-
-resource "time_sleep" "wait_60_seconds" {
-  depends_on      = [null_resource.deployment]
-  create_duration = "60s"
-}
-
-resource "null_resource" "fetch_nomad_token" {
-  depends_on = [time_sleep.wait_60_seconds]
-
-  provisioner "local-exec" {
-    command = <<EOF
-      for i in ${join(" ", [for server in hcloud_server.main : server.ipv4_address if length(regexall("server.*", server.name)) > 0])}
-      do
-        ssh -i ${path.root}/certs/machines.pem -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile=/dev/null" root@$i curl --request POST http://localhost:4646/v1/acl/bootstrap | jq -r -R 'fromjson? | .SecretID?' >> ${path.root}/certs/nomad_token
-      done
-    EOF
   }
 }
 
@@ -109,7 +93,6 @@ resource "hcloud_ssh_key" "default" {
 resource "null_resource" "clean_up" {
   provisioner "local-exec" {
     command = <<EOF
-      rm -f ${path.root}/certs/nomad_token
       rm -f ${path.root}/certs/machines.pem
     EOF
     when    = destroy

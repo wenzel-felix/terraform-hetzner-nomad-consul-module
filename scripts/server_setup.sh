@@ -43,7 +43,7 @@ server {
 }
 
 acl {
-  enabled = true
+  %{ if bootstrap }enabled        = false%{ else }enabled        = true%{ endif }
 }
 EOF
 

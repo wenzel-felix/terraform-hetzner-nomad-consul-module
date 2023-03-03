@@ -1,7 +1,4 @@
 resource "hcloud_load_balancer" "load_balancer" {
-  depends_on = [
-    null_resource.fetch_nomad_token
-  ]
   name               = "nomad-load-balancer"
   load_balancer_type = "lb11"
   location           = var.hetzner_datacenter

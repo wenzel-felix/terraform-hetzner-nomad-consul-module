@@ -27,6 +27,12 @@ variable "hetzner_datacenter" {
     default = "hel1"
 }
 
+variable "bootstrap" {
+    type        = bool
+    description = "Bootstrap Nomad without ACLs"
+    default = true
+}
+
 variable "hetzner_network_zone" {
     type        = string
     description = "Hetzner Cloud Network Zone"
