@@ -7,14 +7,14 @@ output "server_info" {
   }
 }
 
-output "nomad_token" {
-  value = fileexists("certs/nomad_token") ? trimspace(file("certs/nomad_token")) : "Could not find nomad token file from initial bootstrap. If this is your initial apply, please create a GitHub issue."
-}
-
 output "nomad_address" {
   value = "http://${hcloud_load_balancer.load_balancer.ipv4}:80"
 }
 
 output "network_id" {
   value = hcloud_network.network.id
+}
+
+output "tls_private_key" {
+  value = tls_private_key.machines.private_key_pem
 }

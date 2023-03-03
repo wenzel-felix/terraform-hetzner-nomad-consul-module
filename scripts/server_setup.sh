@@ -43,7 +43,7 @@ server {
 }
 
 acl {
-  enabled = true
+  %{ if bootstrap }enabled        = false%{ else }enabled        = true%{ endif }
 }
 EOF
 
@@ -54,16 +54,5 @@ systemctl enable nomad
 # and start the services
 systemctl start consul
 systemctl start nomad
-
-# consul acl bootstrap -format=json | jq -r -R 'fromjson? | .SecretID?' > /etc/consul.d/acl_master_token
-# export CONSUL_HTTP_TOKEN=$(cat /etc/consul.d/acl_master_token)
-# export CONSUL_HTTP_ADDR="http://127.0.0.1:8500"
-# To check the cluster, run the following command on one of your servers
-#consul members
-#sleep 10
-#curl --request POST http://localhost:4646/v1/acl/bootstrap | jq -r '.SecretID' > nomad_token
-
-# Since we use ACLs (Access Control Lists) on Nomad, we have to get the bootstrap token first, before checking the status here as well.
-#nomad server members
 
 #reboot
