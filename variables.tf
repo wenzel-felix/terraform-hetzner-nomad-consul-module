@@ -38,3 +38,15 @@ variable "hetzner_network_zone" {
     description = "Hetzner Cloud Network Zone"
     default = "eu-central"
 }
+
+variable "apt_consul_version" {
+  type = string
+    description = "Consul version to install"
+    default = "1.15.0-1"
+}
+
+variable "apt_nomad_version" {
+  type = string
+    description = "Nomad version to install"
+    default = "1.5.0-1"
+}

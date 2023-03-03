@@ -20,7 +20,10 @@ resource "hcloud_server" "main" {
     ipv6_enabled = false
   }
 
-  user_data = file("${path.module}/scripts/base_configuration.sh")
+  user_data = templatefile("${path.module}/scripts/base_configuration.sh", {
+    CONSUL_VERSION = var.apt_consul_version
+    NOMAD_VERSION  = var.apt_nomad_version
+  })
 
   provisioner "remote-exec" {
     inline = [
