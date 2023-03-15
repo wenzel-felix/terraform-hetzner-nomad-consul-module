@@ -32,7 +32,7 @@ client {
 }
 
 acl {
-  %{ if bootstrap }enabled        = false%{ else }enabled        = true%{ endif }
+  %{ if bootstrap }enabled        = true%{ else }enabled        = false%{ endif }
 }
 EOF
 
