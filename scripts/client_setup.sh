@@ -45,6 +45,11 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.
 apt update
 apt install docker-ce docker-ce-cli containerd.io docker-compose-plugin -y
 
+# Install CNI plugins https://developer.hashicorp.com/nomad/docs/integrations/consul-connect?ref=karan-sharma#cni-plugins
+curl -L -o cni-plugins.tgz "https://github.com/containernetworking/plugins/releases/download/v1.0.0/cni-plugins-linux-$( [ $(uname -m) = aarch64 ] && echo arm64 || echo amd64)"-v1.0.0.tgz
+sudo mkdir -p /opt/cni/bin
+sudo tar -C /opt/cni/bin -xzf cni-plugins.tgz
+
 # To make the snapshot as small as possible, we will only enable the services, but won't start them yet.
 systemctl enable consul
 systemctl enable nomad
