@@ -32,8 +32,19 @@ client {
 }
 
 acl {
-  %{ if bootstrap }enabled        = false%{ else }enabled        = true%{ endif }
+  %{ if enable_nomad_acls }enabled        = true%{ else }enabled        = false%{ endif }
 }
+EOF
+
+# Install CNI plugins
+CNI_VERSION="v1.2.0"
+curl -L -o cni-plugins.tgz "https://github.com/containernetworking/plugins/releases/download/$CNI_VERSION/cni-plugins-linux-$( [ $(uname -m) = aarch64 ] && echo arm64 || echo amd64)"-$CNI_VERSION.tgz
+mkdir -p /opt/cni/bin
+tar -C /opt/cni/bin -xzf cni-plugins.tgz
+cat <<EOF >/etc/sysctl.d/10-consul.conf
+net.bridge.bridge-nf-call-arptables = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
 EOF
 
 # Install Docker Engine

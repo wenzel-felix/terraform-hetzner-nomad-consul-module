@@ -56,13 +56,13 @@ resource "null_resource" "deployment" {
   provisioner "file" {
     content = each.value.type == "server" ? templatefile("${path.module}/scripts/server_setup.sh",
         {
-          bootstrap = var.bootstrap
+          enable_nomad_acls = var.enable_nomad_acls
           SERVER_COUNT = length(local.Server_Count)
           IP_RANGE     = local.IP_range
           SERVER_IPs   = jsonencode([for key, value in local.Extended_Aggregator_IPs : value.private_ipv4[0] if value.type == "server"])
         }) : templatefile("${path.module}/scripts/client_setup.sh",
         {
-          bootstrap = var.bootstrap
+          enable_nomad_acls = var.enable_nomad_acls
           SERVER_COUNT = length(local.Server_Count)
           IP_RANGE     = local.IP_range
           SERVER_IPs   = jsonencode([for key, value in local.Extended_Aggregator_IPs : value.private_ipv4[0] if value.type == "server"])
