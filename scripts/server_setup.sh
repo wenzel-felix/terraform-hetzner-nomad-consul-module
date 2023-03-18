@@ -43,7 +43,7 @@ server {
 }
 
 acl {
-  %{ if bootstrap }enabled        = false%{ else }enabled        = true%{ endif }
+  %{ if enable_nomad_acls }enabled        = true%{ else }enabled        = false%{ endif }
 }
 EOF
 

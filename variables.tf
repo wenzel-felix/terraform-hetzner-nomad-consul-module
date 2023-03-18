@@ -27,9 +27,9 @@ variable "hetzner_datacenter" {
     default = "hel1"
 }
 
-variable "bootstrap" {
+variable "enable_nomad_acls" {
     type        = bool
-    description = "Bootstrap Nomad without ACLs"
+    description = "Bootstrap Nomad with ACLs"
     default = true
 }
 
