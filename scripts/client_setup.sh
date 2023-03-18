@@ -37,7 +37,7 @@ acl {
 EOF
 
 # Install CNI plugins
-CNI_VERSION="v1.0.0"
+CNI_VERSION="v1.2.0"
 curl -L -o cni-plugins.tgz "https://github.com/containernetworking/plugins/releases/download/$CNI_VERSION/cni-plugins-linux-$( [ $(uname -m) = aarch64 ] && echo arm64 || echo amd64)"-$CNI_VERSION.tgz
 mkdir -p /opt/cni/bin
 tar -C /opt/cni/bin -xzf cni-plugins.tgz
