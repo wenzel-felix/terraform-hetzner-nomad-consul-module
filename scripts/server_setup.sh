@@ -24,8 +24,6 @@ performance {
 }
 EOF
 
-sed -i -r "s/Your_Vault_Token/$(cat /etc/consul.d/connect_ca_token)/" /etc/consul.d/consul.hcl
-
 # Check the configuration with the command
 consul validate /etc/consul.d/consul.hcl
 
