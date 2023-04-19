@@ -1,8 +1,9 @@
 module "hetzner-nomad-consul" {
     source = "../../"
     hetzner_token = var.hetzner_token
-    enable_nomad_acls = false
-    nomad_server_count = 1
+    nomad_server_count = 3
+    generate_ssh_key_file = true
+    enable_nomad_acls = true
 }
 
 output "server_info" {

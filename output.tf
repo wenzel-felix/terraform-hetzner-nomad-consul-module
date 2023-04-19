@@ -1,10 +1,16 @@
 output "server_info" {
-  value = {
-    for server in hcloud_server.main : server.name => {
+  value = merge({
+    for server in hcloud_server.server : server.name => {
       "public_ip"   = server.ipv4_address
       "private_ips" = "[${join(", ", server.network != null ? server.network[*].ip : [])}]"
     }
-  }
+    },
+    {
+      for server in hcloud_server.client : server.name => {
+        "public_ip"   = server.ipv4_address
+        "private_ips" = "[${join(", ", server.network != null ? server.network[*].ip : [])}]"
+      }
+  })
 }
 
 output "nomad_address" {

@@ -1,7 +1,7 @@
 resource "hcloud_load_balancer" "load_balancer" {
   name               = "nomad-load-balancer"
   load_balancer_type = "lb11"
-  location           = var.hetzner_datacenter
+  location           = "hel1"
 }
 
 resource "hcloud_load_balancer_network" "load_balancer" {
