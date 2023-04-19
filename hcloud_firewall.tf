@@ -17,5 +17,5 @@ resource "hcloud_firewall_attachment" "default" {
     hcloud_server.client
   ]
   firewall_id = hcloud_firewall.default.id
-  label_selectors = [ "nomad-server", "nomad-client", "vault-server" ]
+  label_selectors = [ "nomad-server", "nomad-client" ]
 }
