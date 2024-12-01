@@ -18,7 +18,7 @@ resource "hcloud_server" "server" {
   ]
   count       = var.nomad_server_count
   name        = "nomad-server-${count.index}"
-  server_type = "cpx11"
+  server_type = var.hetzner_server_sku
   image       = "ubuntu-20.04"
   location    = element(var.node_locations, count.index)
   ssh_keys    = [hcloud_ssh_key.default.id]
@@ -87,7 +87,7 @@ resource "hcloud_server" "client" {
   ]
   count       = var.nomad_client_count
   name        = "nomad-client-${count.index}"
-  server_type = "cpx11"
+  server_type = var.hetzner_client_sku
   image       = "ubuntu-20.04"
   location    = element(var.node_locations, count.index)
   ssh_keys    = [hcloud_ssh_key.default.id]
