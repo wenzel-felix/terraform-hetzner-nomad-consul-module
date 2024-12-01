@@ -3,6 +3,18 @@ variable "hetzner_token" {
   description = "Hetzner Cloud API Token"
 }
 
+variable "hetzner_server_sku" {
+  type        = string
+  description = "Hetzner Cloud SKU for servers"
+  default     = "cpx11"
+}
+
+variable "hetzner_client_sku" {
+  type        = string
+  description = "Hetzner Cloud SKU for clients"
+  default     = "cpx11"
+}
+
 variable "virtual_network_cidr" {
   type        = string
   description = "CIDR of the virtual network"
